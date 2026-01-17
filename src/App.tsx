@@ -274,7 +274,9 @@ export default function App() {
                                 placeholder="1"
                                 value={tables}
                                 defaultValue={1}
-                                onChange={setTables}
+                                onChange={(s)=>{
+                                    setTables(Number(s));
+                                }}
                                 min={1}
                                 clampBehavior="strict"
                                 classNames={{ label: "text-zinc-100" }}
