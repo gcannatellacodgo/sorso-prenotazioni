@@ -206,7 +206,9 @@ export default function App() {
                                         label="Tavoli"
                                         placeholder="1"
                                         value={tables}
-                                        onChange={setTables}
+                                        onChange={(s)=>{
+                                            setTables(Number(s));
+                                        }}
                                         min={1}
                                         clampBehavior="strict"
                                     />
