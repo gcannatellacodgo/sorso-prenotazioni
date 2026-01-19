@@ -10,14 +10,14 @@ import { BrowserRouter } from "react-router-dom";
 
 
 import "./index.css";
-import AppRoutes from "./AppRoutes.tsx";
+import App from "./App.tsx";
 
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
         <BrowserRouter>
             <MantineProvider defaultColorScheme="dark">
                 <Notifications position="top-right" />
-                <AppRoutes />
+                <App />
             </MantineProvider>
         </BrowserRouter>
     </React.StrictMode>
