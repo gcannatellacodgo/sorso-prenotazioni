@@ -12,10 +12,12 @@
   "dependencies": {
     "@emotion/react": "^11.14.0",
     "@mantine/core": "^8.3.12",
+    "@mantine/dates": "^8.3.12",
     "@mantine/hooks": "^8.3.12",
     "@mantine/notifications": "^8.3.12",
     "@supabase/supabase-js": "^2.90.1",
     "@tailwindcss/vite": "^4.1.18",
+    "dayjs": "^1.11.19",
     "jspdf": "^4.0.0",
     "jspdf-autotable": "^5.0.7",
     "react": "^19.2.0",

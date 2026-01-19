@@ -21,6 +21,9 @@ import { supabase } from "../supabase";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 
+import { DateInput } from "@mantine/dates";
+import "@mantine/dates/styles.css";
+
 type PackageCode = "base" | "premium" | "elite";
 
 type StaffEvent = {
@@ -50,8 +53,7 @@ type ReservationRow = {
     status: string;
 };
 
-const euro = (n: number) =>
-    new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
+const euro = (n: number) => new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 
 function fmtDateISO(dateISO: string) {
     const d = new Date(dateISO + "T00:00:00");
@@ -66,6 +68,19 @@ function safeNumber(v: unknown, fallback = 0) {
     return Number.isFinite(n) ? n : fallback;
 }
 
+function toISODate(d: Date) {
+    const yyyy = d.getFullYear();
+    const mm = String(d.getMonth() + 1).padStart(2, "0");
+    const dd = String(d.getDate()).padStart(2, "0");
+    return `${yyyy}-${mm}-${dd}`;
+}
+
+function pkgLabel(p: PackageCode) {
+    if (p === "base") return "Base";
+    if (p === "premium") return "Premium";
+    return "Élite";
+}
+
 export default function StaffPage() {
     const nav = useNavigate();
 
@@ -75,10 +90,7 @@ export default function StaffPage() {
     const [events, setEvents] = useState<StaffEvent[]>([]);
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-    const selectedEvent = useMemo(
-        () => events.find((e) => e.id === selectedEventId) ?? null,
-        [events, selectedEventId]
-    );
+    const selectedEvent = useMemo(() => events.find((e) => e.id === selectedEventId) ?? null, [events, selectedEventId]);
 
     const [availability, setAvailability] = useState<Record<PackageCode, AvailabilityRow>>({
         base: { package: "base", total_tables: 0, booked_tables: 0 },
@@ -89,36 +101,46 @@ export default function StaffPage() {
     const [reservations, setReservations] = useState<ReservationRow[]>([]);
 
     // create event form
-    const [newCode, setNewCode] = useState("fri");
     const [newTitle, setNewTitle] = useState("");
-    const [newDate, setNewDate] = useState("");
+    const [newDate, setNewDate] = useState<Date | null>(null);
     const [newPosterUrl, setNewPosterUrl] = useState("");
     const [newActive, setNewActive] = useState(true);
+
     const [totBase, setTotBase] = useState<number>(20);
     const [totPremium, setTotPremium] = useState<number>(20);
     const [totElite, setTotElite] = useState<number>(20);
 
     // edit selected event quick fields
     const [editPosterUrl, setEditPosterUrl] = useState("");
-    const [editActive, setEditActive] = useState(true);
 
     // edit totals
     const [editTotBase, setEditTotBase] = useState<number>(20);
     const [editTotPremium, setEditTotPremium] = useState<number>(20);
     const [editTotElite, setEditTotElite] = useState<number>(20);
 
-    const totalsBooked = useMemo(
-        () => reservations.reduce((acc, r) => acc + (r.tables || 0), 0),
-        [reservations]
-    );
-
-    const totalsRevenue = useMemo(
-        () => reservations.reduce((acc, r) => acc + (r.total || 0), 0),
-        [reservations]
-    );
-
     // evita doppi submit in createEvent
     const creatingRef = useRef(false);
+
+    // ========= DERIVATI PRENOTAZIONI =========
+    const totals = useMemo(() => {
+        const byPkg: Record<PackageCode, { tables: number; revenue: number; count: number }> = {
+            base: { tables: 0, revenue: 0, count: 0 },
+            premium: { tables: 0, revenue: 0, count: 0 },
+            elite: { tables: 0, revenue: 0, count: 0 },
+        };
+
+        for (const r of reservations) {
+            const p = r.package;
+            byPkg[p].tables += r.tables || 0;
+            byPkg[p].revenue += r.total || 0;
+            byPkg[p].count += 1;
+        }
+
+        const totalTables = byPkg.base.tables + byPkg.premium.tables + byPkg.elite.tables;
+        const totalRevenue = byPkg.base.revenue + byPkg.premium.revenue + byPkg.elite.revenue;
+
+        return { byPkg, totalTables, totalRevenue };
+    }, [reservations]);
 
     // ========= AUTH GUARD =========
     useEffect(() => {
@@ -176,7 +198,7 @@ export default function StaffPage() {
 
             setSelectedEventId((prev) => prev ?? list[0].id);
         } catch (e) {
-            alert(e instanceof Error ? e.message : "Errore caricamento eventi");
+            alert(e instanceof Error ? e.message : "Errore nel caricamento degli eventi");
         } finally {
             setLoading(false);
         }
@@ -185,12 +207,8 @@ export default function StaffPage() {
     const loadEventDetails = async (eventId: string) => {
         setLoading(true);
         try {
-            // availability
-            const { data: a, error: e1 } = await supabase
-                .from("event_packages")
-                .select("package, total_tables, booked_tables")
-                .eq("event_id", eventId);
-
+            // disponibilità
+            const { data: a, error: e1 } = await supabase.from("event_packages").select("package, total_tables, booked_tables").eq("event_id", eventId);
             if (e1) throw e1;
 
             const map: Record<PackageCode, AvailabilityRow> = {
@@ -209,7 +227,7 @@ export default function StaffPage() {
             setEditTotPremium(map.premium.total_tables);
             setEditTotElite(map.elite.total_tables);
 
-            // reservations
+            // prenotazioni
             const { data: r, error: e2 } = await supabase
                 .from("reservations")
                 .select("id, created_at, name, phone, notes, package, tables, total, status")
@@ -220,7 +238,7 @@ export default function StaffPage() {
 
             setReservations((r ?? []) as ReservationRow[]);
         } catch (e) {
-            alert(e instanceof Error ? e.message : "Errore caricamento dettagli evento");
+            alert(e instanceof Error ? e.message : "Errore nel caricamento dei dettagli dell'evento");
         } finally {
             setLoading(false);
         }
@@ -235,7 +253,6 @@ export default function StaffPage() {
     useEffect(() => {
         if (!selectedEvent) return;
         setEditPosterUrl(selectedEvent.poster_url ?? "");
-        setEditActive(!!selectedEvent.active);
     }, [selectedEvent]);
 
     // ========= EXPORT PDF =========
@@ -249,7 +266,7 @@ export default function StaffPage() {
         });
 
         doc.setFontSize(16);
-        doc.text("SORSO CLUB – Prenotazioni Evento", 14, 15);
+        doc.text("SORSO CLUB – Prenotazioni", 14, 15);
 
         doc.setFontSize(11);
         doc.text(`${selectedEvent.title} – ${fmtDateISO(selectedEvent.date)}`, 14, 23);
@@ -258,7 +275,7 @@ export default function StaffPage() {
             new Date(r.created_at).toLocaleString("it-IT"),
             r.name,
             r.phone,
-            r.package.toUpperCase(),
+            pkgLabel(r.package),
             String(r.tables),
             euro(r.total),
             r.notes ?? "",
@@ -266,28 +283,9 @@ export default function StaffPage() {
 
         autoTable(doc, {
             startY: 30,
-            head: [[
-                "Data",
-                "Nome",
-                "Telefono",
-                "Pacchetto",
-                "Tavoli",
-                "Totale",
-                "Note",
-            ]],
+            head: [["Data", "Nome", "Telefono", "Pacchetto", "Tavoli", "Totale", "Note"]],
             body: tableBody,
-            styles: {
-                fontSize: 9,
-                cellPadding: 3,
-            },
-            headStyles: {
-                fillColor: [6, 182, 212], // cyan
-                textColor: 0,
-                fontStyle: "bold",
-            },
-            alternateRowStyles: {
-                fillColor: [245, 245, 245],
-            },
+            styles: { fontSize: 9, cellPadding: 3 },
             margin: { left: 14, right: 14 },
         });
 
@@ -295,35 +293,33 @@ export default function StaffPage() {
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
-            doc.text(
-                `Pagina ${i} di ${pageCount}`,
-                doc.internal.pageSize.getWidth() - 30,
-                doc.internal.pageSize.getHeight() - 10
-            );
+            doc.text(`Pagina ${i} di ${pageCount}`, doc.internal.pageSize.getWidth() - 30, doc.internal.pageSize.getHeight() - 10);
         }
 
-        const filename = `prenotazioni_${selectedEvent.code}_${selectedEvent.date}.pdf`;
+        const filename = `prenotazioni_${selectedEvent.date}.pdf`;
         doc.save(filename);
     };
 
-    // ========= ACTIONS =========
+    // ========= AZIONI =========
     const createEvent = async () => {
         if (creatingRef.current) return;
-        if (!newTitle.trim() || !newDate.trim() || !newCode.trim()) {
-            return alert("Inserisci almeno: giorno, titolo, data");
-        }
+
+        if (!newTitle.trim() || !newDate) return alert("Inserisci almeno: titolo e data");
 
         creatingRef.current = true;
         setLoading(true);
 
         try {
+            const dateISO = toISODate(newDate);
+            const code = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][newDate.getDay()];
+
             const { data: created, error: e1 } = await supabase
                 .from("events")
                 .insert([
                     {
-                        code: newCode.trim(),
+                        code,
                         title: newTitle.trim(),
-                        date: newDate.trim(),
+                        date: dateISO,
                         poster_url: newPosterUrl.trim() || null,
                         active: !!newActive,
                     },
@@ -336,20 +332,21 @@ export default function StaffPage() {
 
             const eventId = String(created.id);
 
-            // UPSERT: evita 409 duplicate su unique(event_id, package)
-            const { error: e2 } = await supabase.from("event_packages").upsert(
-                [
-                    { event_id: eventId, package: "base", total_tables: safeNumber(totBase, 0), booked_tables: 0 },
-                    { event_id: eventId, package: "premium", total_tables: safeNumber(totPremium, 0), booked_tables: 0 },
-                    { event_id: eventId, package: "elite", total_tables: safeNumber(totElite, 0), booked_tables: 0 },
-                ],
-                { onConflict: "event_id,package" }
-            );
+            const { error: e2 } = await supabase
+                .from("event_packages")
+                .upsert(
+                    [
+                        { event_id: eventId, package: "base", total_tables: safeNumber(totBase, 0), booked_tables: 0 },
+                        { event_id: eventId, package: "premium", total_tables: safeNumber(totPremium, 0), booked_tables: 0 },
+                        { event_id: eventId, package: "elite", total_tables: safeNumber(totElite, 0), booked_tables: 0 },
+                    ],
+                    { onConflict: "event_id,package" }
+                );
 
             if (e2) throw e2;
 
             setNewTitle("");
-            setNewDate("");
+            setNewDate(null);
             setNewPosterUrl("");
             setTotBase(20);
             setTotPremium(20);
@@ -362,49 +359,45 @@ export default function StaffPage() {
 
             alert("Evento creato ✅");
         } catch (e) {
-            alert(e instanceof Error ? e.message : "Errore creazione evento");
+            alert(e instanceof Error ? e.message : "Errore nella creazione dell'evento");
         } finally {
             setLoading(false);
             creatingRef.current = false;
         }
     };
 
-    const saveEventMeta = async () => {
+    const savePosterUrl = async () => {
         if (!selectedEvent) return;
         setLoading(true);
         try {
             const { error } = await supabase
                 .from("events")
-                .update({
-                    poster_url: editPosterUrl.trim() || null,
-                    active: !!editActive,
-                })
+                .update({ poster_url: editPosterUrl.trim() || null })
                 .eq("id", selectedEvent.id);
 
             if (error) throw error;
 
             await loadEvents();
-            alert("Aggiornato ✅");
+            alert("Copertina aggiornata ✅");
         } catch (e) {
-            alert(e instanceof Error ? e.message : "Errore aggiornamento evento");
+            alert(e instanceof Error ? e.message : "Errore nell'aggiornamento della copertina");
         } finally {
             setLoading(false);
         }
     };
 
-    const deactivateEvent = async () => {
+    const toggleActive = async () => {
         if (!selectedEvent) return;
-        if (!confirm("Disattivare questo evento? (active = false)")) return;
-
         setLoading(true);
         try {
-            const { error } = await supabase.from("events").update({ active: false }).eq("id", selectedEvent.id);
+            const next = !selectedEvent.active;
+            const { error } = await supabase.from("events").update({ active: next }).eq("id", selectedEvent.id);
             if (error) throw error;
 
             await loadEvents();
-            alert("Evento disattivato ✅");
+            alert(next ? "Evento attivato ✅" : "Evento disattivato ✅");
         } catch (e) {
-            alert(e instanceof Error ? e.message : "Errore disattivazione evento");
+            alert(e instanceof Error ? e.message : "Errore nella modifica dello stato dell'evento");
         } finally {
             setLoading(false);
         }
@@ -419,25 +412,27 @@ export default function StaffPage() {
 
         if (editTotBase < bookedBase) return alert(`Base: non puoi scendere sotto ${bookedBase}`);
         if (editTotPremium < bookedPremium) return alert(`Premium: non puoi scendere sotto ${bookedPremium}`);
-        if (editTotElite < bookedElite) return alert(`Elite: non puoi scendere sotto ${bookedElite}`);
+        if (editTotElite < bookedElite) return alert(`Élite: non puoi scendere sotto ${bookedElite}`);
 
         setLoading(true);
         try {
-            const { error } = await supabase.from("event_packages").upsert(
-                [
-                    { event_id: selectedEvent.id, package: "base", total_tables: safeNumber(editTotBase, 0), booked_tables: bookedBase },
-                    { event_id: selectedEvent.id, package: "premium", total_tables: safeNumber(editTotPremium, 0), booked_tables: bookedPremium },
-                    { event_id: selectedEvent.id, package: "elite", total_tables: safeNumber(editTotElite, 0), booked_tables: bookedElite },
-                ],
-                { onConflict: "event_id,package" }
-            );
+            const { error } = await supabase
+                .from("event_packages")
+                .upsert(
+                    [
+                        { event_id: selectedEvent.id, package: "base", total_tables: safeNumber(editTotBase, 0), booked_tables: bookedBase },
+                        { event_id: selectedEvent.id, package: "premium", total_tables: safeNumber(editTotPremium, 0), booked_tables: bookedPremium },
+                        { event_id: selectedEvent.id, package: "elite", total_tables: safeNumber(editTotElite, 0), booked_tables: bookedElite },
+                    ],
+                    { onConflict: "event_id,package" }
+                );
 
             if (error) throw error;
 
             await loadEventDetails(selectedEvent.id);
             alert("Disponibilità aggiornata ✅");
         } catch (e) {
-            alert(e instanceof Error ? e.message : "Errore aggiornamento disponibilità");
+            alert(e instanceof Error ? e.message : "Errore nell'aggiornamento della disponibilità");
         } finally {
             setLoading(false);
         }
@@ -457,6 +452,45 @@ export default function StaffPage() {
         [events]
     );
 
+    // ======= UI helper copertina =======
+    const CoverHeader = (
+        <Card radius="0" p={0} className="bg-zinc-900/40 border border-zinc-800 overflow-hidden mb-6">
+            <div className="relative h-48 overflow-hidden border-b border-white/5">
+                {selectedEvent?.poster_url ? (
+                    <>
+                        <img
+                            src={selectedEvent.poster_url}
+                            className="w-full h-full object-cover blur-sm opacity-40 absolute scale-110"
+                            alt={selectedEvent.title}
+                        />
+                        <img
+                            src={selectedEvent.poster_url}
+                            className="w-full h-full object-contain relative z-10 p-4"
+                            alt={selectedEvent.title}
+                        />
+                    </>
+                ) : (
+                    <div className="absolute inset-0 bg-zinc-900 grid place-items-center text-zinc-500 text-xs">Nessuna copertina</div>
+                )}
+                <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent z-20" />
+            </div>
+
+            <Group justify="space-between" px="md" py="sm">
+                <div>
+                    <Text fw={900}>{selectedEvent ? selectedEvent.title : "Seleziona un evento"}</Text>
+                    <Text size="xs" c="zinc.5">
+                        {selectedEvent ? fmtDateISO(selectedEvent.date) : "—"}
+                    </Text>
+                </div>
+                {selectedEvent && (
+                    <Badge color={selectedEvent.active ? "green" : "red"} variant="light">
+                        {selectedEvent.active ? "ATTIVO" : "NON ATTIVO"}
+                    </Badge>
+                )}
+            </Group>
+        </Card>
+    );
+
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-cyan-500/30">
             {/* bg glow */}
@@ -470,28 +504,31 @@ export default function StaffPage() {
                 <div className="mx-auto max-w-7xl px-4 py-4 flex items-center justify-between">
                     <div>
                         <Text fw={900} className="tracking-tighter text-xl">
-                            // STAFF • EVENT MANAGER
+                            // STAFF • GESTIONE EVENTI
                         </Text>
                         <Text size="xs" c="zinc.5" className="uppercase tracking-widest">
-                            {loading ? "loading…" : "ready"}
+                            {loading ? "Caricamento…" : "Pronto"}
                         </Text>
                     </div>
 
                     <Group gap="xs">
                         <Button variant="outline" color="cyan" radius="0" size="sm" onClick={loadEvents} disabled={loading}>
-                            Refresh
+                            Aggiorna
                         </Button>
                         <Button variant="subtle" color="gray" radius="0" size="sm" onClick={() => nav("/")}>
                             Home
                         </Button>
                         <Button variant="subtle" color="gray" radius="0" size="sm" onClick={logout}>
-                            Logout
+                            Esci
                         </Button>
                     </Group>
                 </div>
             </div>
 
             <main className="mx-auto max-w-7xl px-4 py-8 relative z-10">
+                {/* COPERTINA SEMPRE VISIBILE */}
+                {CoverHeader}
+
                 <Tabs value={tab} onChange={setTab} radius="0" color="cyan">
                     <Tabs.List>
                         <Tabs.Tab value="events">Eventi</Tabs.Tab>
@@ -516,9 +553,9 @@ export default function StaffPage() {
                                         data={eventOptions}
                                         value={selectedEventId}
                                         onChange={(v) => setSelectedEventId(v)}
-                                        placeholder="Scegli evento…"
+                                        placeholder="Scegli un evento…"
                                         searchable
-                                        nothingFoundMessage="Nessun evento"
+                                        nothingFoundMessage="Nessun evento trovato"
                                     />
 
                                     {selectedEvent && (
@@ -527,33 +564,28 @@ export default function StaffPage() {
                                                 <div>
                                                     <Text fw={900}>{selectedEvent.title}</Text>
                                                     <Text size="xs" c="zinc.5">
-                                                        {fmtDateISO(selectedEvent.date)} • code: {selectedEvent.code}
+                                                        {fmtDateISO(selectedEvent.date)}
                                                     </Text>
                                                 </div>
-                                                <Badge color={selectedEvent.active ? "green" : "red"} variant="light">
-                                                    {selectedEvent.active ? "ACTIVE" : "OFF"}
-                                                </Badge>
+
+                                                <Button radius="0" variant="outline" color={selectedEvent.active ? "red" : "green"} onClick={toggleActive} disabled={loading}>
+                                                    {selectedEvent.active ? "Disattiva" : "Attiva"}
+                                                </Button>
                                             </Group>
 
                                             <Divider my="md" color="dark.7" />
 
                                             <TextInput
-                                                label="Poster URL (facoltativo)"
+                                                label="URL copertina (facoltativo)"
                                                 placeholder="https://..."
                                                 value={editPosterUrl}
                                                 onChange={(e) => setEditPosterUrl(e.currentTarget.value)}
                                             />
 
-                                            <Group justify="space-between" mt="md">
-                                                <Switch checked={editActive} onChange={(e) => setEditActive(e.currentTarget.checked)} label="Evento attivo" />
-                                                <Group gap="xs">
-                                                    <Button variant="outline" color="cyan" radius="0" onClick={saveEventMeta} disabled={loading}>
-                                                        Salva
-                                                    </Button>
-                                                    <Button color="red" radius="0" variant="outline" onClick={deactivateEvent} disabled={loading}>
-                                                        Disattiva
-                                                    </Button>
-                                                </Group>
+                                            <Group justify="flex-end" mt="md">
+                                                <Button variant="outline" color="cyan" radius="0" onClick={savePosterUrl} disabled={loading}>
+                                                    Salva copertina
+                                                </Button>
                                             </Group>
                                         </div>
                                     )}
@@ -567,69 +599,48 @@ export default function StaffPage() {
                                     </Text>
 
                                     <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="md">
-                                        <Select
-                                            label="Giorno"
-                                            data={[
-                                                { value: "mon", label: "Lunedì" },
-                                                { value: "tue", label: "Martedì" },
-                                                { value: "wed", label: "Mercoledì" },
-                                                { value: "thu", label: "Giovedì" },
-                                                { value: "fri", label: "Venerdì" },
-                                                { value: "sat", label: "Sabato" },
-                                                { value: "sun", label: "Domenica" },
-                                            ]}
-                                            value={newCode}
-                                            onChange={(v) => setNewCode(v || "fri")}
-                                        />
-                                        <TextInput
-                                            label="Data (YYYY-MM-DD)"
-                                            placeholder="2026-01-23"
+                                        <DateInput
+                                            label="Data"
                                             value={newDate}
-                                            onChange={(e) => setNewDate(e.currentTarget.value)}
+                                            onChange={setNewDate}
+                                            valueFormat="DD/MM/YYYY"
+                                            placeholder="Seleziona una data"
+                                            locale="it"
+                                            clearable
+                                        />
+
+                                        <TextInput
+                                            label="Titolo"
+                                            placeholder="Venerdì Italiano"
+                                            value={newTitle}
+                                            onChange={(e) => setNewTitle(e.currentTarget.value)}
                                         />
                                     </SimpleGrid>
 
                                     <TextInput
-                                        label="Titolo"
-                                        placeholder="Venerdì Italiano"
-                                        value={newTitle}
-                                        onChange={(e) => setNewTitle(e.currentTarget.value)}
-                                    />
-
-                                    <TextInput
-                                        label="Poster URL (facoltativo)"
+                                        label="URL copertina (facoltativo)"
                                         placeholder="https://..."
                                         value={newPosterUrl}
                                         onChange={(e) => setNewPosterUrl(e.currentTarget.value)}
                                     />
 
-                                    <Switch checked={newActive} onChange={(e) => setNewActive(e.currentTarget.checked)} label="Attivo" />
+                                    <Switch checked={newActive} onChange={(e) => setNewActive(e.currentTarget.checked)} label="Evento attivo" />
 
                                     <Divider color="dark.7" />
 
                                     <Text size="sm" c="zinc.4">
-                                        Disponibilità tavoli (totali)
+                                        Tavoli disponibili (totali)
                                     </Text>
 
                                     <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
                                         <NumberInput label="Base" min={0} value={totBase} onChange={(v) => setTotBase(safeNumber(v))} />
                                         <NumberInput label="Premium" min={0} value={totPremium} onChange={(v) => setTotPremium(safeNumber(v))} />
-                                        <NumberInput label="Elite" min={0} value={totElite} onChange={(v) => setTotElite(safeNumber(v))} />
+                                        <NumberInput label="Élite" min={0} value={totElite} onChange={(v) => setTotElite(safeNumber(v))} />
                                     </SimpleGrid>
 
-                                    <Button
-                                        color="cyan"
-                                        radius="0"
-                                        className="font-black uppercase"
-                                        onClick={createEvent}
-                                        disabled={loading || creatingRef.current}
-                                    >
+                                    <Button color="cyan" radius="0" className="font-black uppercase" onClick={createEvent} disabled={loading || creatingRef.current}>
                                         Crea evento
                                     </Button>
-
-                                    <Text size="xs" c="zinc.6">
-                                        Nota: se premi 2 volte, non va più in 409 (upsert).
-                                    </Text>
                                 </Stack>
                             </Card>
                         </SimpleGrid>
@@ -666,7 +677,7 @@ export default function StaffPage() {
                                             </Group>
                                             <Group justify="space-between" mt="xs">
                                                 <Text size="sm" c="zinc.4">
-                                                    Elite
+                                                    Élite
                                                 </Text>
                                                 <Text fw={900}>
                                                     {availability.elite.total_tables - availability.elite.booked_tables} / {availability.elite.total_tables}
@@ -677,13 +688,13 @@ export default function StaffPage() {
                                         <Divider color="dark.7" />
 
                                         <Text size="sm" c="zinc.4">
-                                            Imposta nuovi totali (non tocca booked)
+                                            Imposta nuovi totali (non modifica i già prenotati)
                                         </Text>
 
                                         <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
                                             <NumberInput label="Base" min={0} value={editTotBase} onChange={(v) => setEditTotBase(safeNumber(v))} />
                                             <NumberInput label="Premium" min={0} value={editTotPremium} onChange={(v) => setEditTotPremium(safeNumber(v))} />
-                                            <NumberInput label="Elite" min={0} value={editTotElite} onChange={(v) => setEditTotElite(safeNumber(v))} />
+                                            <NumberInput label="Élite" min={0} value={editTotElite} onChange={(v) => setEditTotElite(safeNumber(v))} />
                                         </SimpleGrid>
 
                                         <Button color="cyan" radius="0" onClick={saveAvailability} disabled={loading} className="font-black uppercase">
@@ -691,7 +702,7 @@ export default function StaffPage() {
                                         </Button>
 
                                         <Text size="xs" c="zinc.6">
-                                            Nota: non scendere sotto i tavoli già prenotati (booked).
+                                            Nota: non puoi scendere sotto i tavoli già prenotati.
                                         </Text>
                                     </Stack>
                                 </Card>
@@ -699,20 +710,20 @@ export default function StaffPage() {
                                 <Card radius="0" className="bg-zinc-900/40 border border-zinc-800">
                                     <Stack gap="md">
                                         <Text fw={900} className="uppercase tracking-widest text-cyan-400">
-                                            Info evento
+                                            Informazioni evento
                                         </Text>
                                         <Text fw={900}>{selectedEvent.title}</Text>
                                         <Text size="sm" c="zinc.4">
-                                            Giorno: {selectedEvent.code} • Data: {fmtDateISO(selectedEvent.date)}
+                                            Data: {fmtDateISO(selectedEvent.date)}
                                         </Text>
                                         <Badge color={selectedEvent.active ? "green" : "red"} variant="light">
-                                            {selectedEvent.active ? "ACTIVE" : "OFF"}
+                                            {selectedEvent.active ? "ATTIVO" : "NON ATTIVO"}
                                         </Badge>
 
                                         <Divider color="dark.7" />
 
                                         <Text size="sm" c="zinc.4">
-                                            Poster URL
+                                            URL copertina
                                         </Text>
                                         <Text size="xs" c="zinc.5" style={{ wordBreak: "break-all" }}>
                                             {selectedEvent.poster_url ?? "—"}
@@ -740,34 +751,48 @@ export default function StaffPage() {
                                             </Text>
                                         </div>
 
-                                        <Group gap="xs">
-                                            <Button
-                                                radius="0"
-                                                variant="outline"
-                                                color="cyan"
-                                                onClick={exportReservationsPdf}
-                                                disabled={reservations.length === 0}
-                                            >
-                                                Esporta PDF
-                                            </Button>
+                                        <div className="text-right">
+                                            <Text size="xs" c="zinc.5" className="uppercase tracking-widest">
+                                                Tavoli totali
+                                            </Text>
+                                            <Text fw={900}>{totals.totalTables}</Text>
 
-                                            <div className="text-right">
-                                                <Text size="xs" c="zinc.5" className="uppercase tracking-widest">
-                                                    Tavoli
-                                                </Text>
-                                                <Text fw={900}>{totalsBooked}</Text>
-                                                <Text size="xs" c="zinc.5" className="uppercase tracking-widest mt-2">
-                                                    Incasso
-                                                </Text>
-                                                <Text fw={900} c="cyan">
-                                                    {euro(totalsRevenue)}
-                                                </Text>
-                                            </div>
-                                        </Group>
+                                            <Text size="xs" c="zinc.5" mt="md" className="uppercase tracking-widest">
+                                                Incasso totale
+                                            </Text>
+                                            <Text fw={900} c="cyan">
+                                                {euro(totals.totalRevenue)}
+                                            </Text>
+
+                                            <Divider my="sm" color="dark.7" />
+
+                                            <Text size="xs" c="zinc.5" className="uppercase tracking-widest">
+                                                Tavoli per pacchetto
+                                            </Text>
+                                            <Text size="sm">
+                                                Base: <b>{totals.byPkg.base.tables}</b> • Premium: <b>{totals.byPkg.premium.tables}</b> • Élite: <b>{totals.byPkg.elite.tables}</b>
+                                            </Text>
+                                        </div>
                                     </Group>
                                 </Card>
 
                                 <Card radius="0" className="bg-zinc-900/40 border border-zinc-800">
+                                    <Group justify="space-between" mb="md">
+                                        <Text fw={900} className="uppercase tracking-widest text-cyan-400">
+                                            Tabella prenotazioni
+                                        </Text>
+
+                                        <Button
+                                            radius="0"
+                                            variant="outline"
+                                            color="cyan"
+                                            onClick={exportReservationsPdf}
+                                            disabled={reservations.length === 0}
+                                        >
+                                            Esporta PDF
+                                        </Button>
+                                    </Group>
+
                                     <Table.ScrollContainer minWidth={900}>
                                         <Table striped highlightOnHover>
                                             <Table.Thead>
@@ -788,11 +813,8 @@ export default function StaffPage() {
                                                         <Table.Td>{r.name}</Table.Td>
                                                         <Table.Td>{r.phone}</Table.Td>
                                                         <Table.Td>
-                                                            <Badge
-                                                                color={r.package === "base" ? "red" : r.package === "premium" ? "green" : "yellow"}
-                                                                variant="light"
-                                                            >
-                                                                {r.package}
+                                                            <Badge color={r.package === "base" ? "red" : r.package === "premium" ? "green" : "yellow"} variant="light">
+                                                                {pkgLabel(r.package)}
                                                             </Badge>
                                                         </Table.Td>
                                                         <Table.Td>{r.tables}</Table.Td>
