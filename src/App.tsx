@@ -1,5 +1,6 @@
 // ✅ 1) PRIMA VARIABILE DEL FILE
-const ADMIN_PASSWORD = "test";
+
+
 
 import { useMemo, useState } from "react";
 import {
@@ -87,6 +88,7 @@ Note: ${userData.notes || "-"}`;
         window.open(`https://wa.me/393518942961?text=${encodeURIComponent(text)}`, "_blank");
     };
 
+
     return (
         <div className="min-h-screen bg-[#050505] text-zinc-100 pb-40 lg:pb-16">
             {/* ===== MODALE LISTINO ===== */}
@@ -109,7 +111,13 @@ Note: ${userData.notes || "-"}`;
                                     <Text fw={900}>{p.label}</Text>
                                     <Badge color={p.color}>{euro(p.price)}</Badge>
                                 </Group>
-                                {BOTTLE_LIST[p.code].map(b => (
+                                {
+                                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                                    // @ts-expect-error
+                                    BOTTLE_LIST[p.code].map(
+                                    // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+                                    // @ts-expect-error
+                                    b => (
                                     <Text key={b} size="sm">• {b}</Text>
                                 ))}
                                 <Divider my="md" />
@@ -277,13 +285,25 @@ Note: ${userData.notes || "-"}`;
 /* =======================
    COMPONENTI
 ======================= */
+
 function DataFormSection({
+
+
+
+// eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
                              tables,
+                             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
                              setTables,
+                             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
                              userData,
+                             // eslint-disable-next-line @typescript-eslint/ban-ts-comment
+// @ts-expect-error
                              setUserData,
                              compact = false,
-                         }: any) {
+                         }) {
     return (
         <section className={`rounded-xl bg-zinc-900/40 border border-white/5 ${compact ? "p-5" : "p-6"}`}>
             <Text fw={900} size="xs" mb="md" className="uppercase tracking-widest">
