@@ -27,7 +27,7 @@ export type PackageCode = "base" | "premium" | "elite";
 
 type SupabaseEvent = {
     id: string; // uuid
-    code: string; // thu/fri/sat o altro
+    code: string; // mon/tue/... o altro
     title: string;
     date: string; // YYYY-MM-DD
     poster_url: string | null;
@@ -74,9 +74,9 @@ type SummaryRowProps = {
 const PEOPLE_PER_TABLE = 6;
 
 const PACKAGES: PackageItem[] = [
-    { code: "base", label: "Base", price: 100, area: "Salla / Pedana", color: "cyan" },
-    { code: "premium", label: "Premium", price: 130, area: "Privè Rialzato", color: "grape" },
-    { code: "elite", label: "Élite", price: 160, area: "Top Privè DJ", color: "emerald" },
+    { code: "base", label: "Base", price: 100, area: "Sala / Pedana", color: "cyan" },
+    { code: "premium", label: "Premium", price: 130, area: "Privé Rialzato", color: "grape" },
+    { code: "elite", label: "Élite", price: 160, area: "Top Privé DJ", color: "emerald" },
 ];
 
 const BOTTLE_LIST: Record<PackageCode, string[]> = {
@@ -92,8 +92,7 @@ const BOTTLE_LIST: Record<PackageCode, string[]> = {
     elite: ["Portofino 0,75L", "Portofino Peninsula 0,75L", "Elit Vodka 0,75L", "Moët Ice 0,75L", "Gleego 0,75L"],
 };
 
-const euro = (n: number) =>
-    new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
+const euro = (n: number) => new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 
 function formatDateLabelISO(dateISO: string) {
     const d = new Date(dateISO + "T00:00:00");
@@ -236,7 +235,7 @@ export default function BookingPage() {
         }
 
         if (!userData.name.trim() || !userData.phone.trim()) {
-            alert("Inserisci nome e WhatsApp");
+            alert("Inserisci nome e numero telefono");
             return;
         }
 
@@ -299,7 +298,7 @@ export default function BookingPage() {
         return (
             <div className="min-h-screen bg-[#0a0a0a] text-white grid place-items-center">
                 <div className="text-center">
-                    <div className="text-cyan-400 font-black tracking-widest">LOADING…</div>
+                    <div className="text-cyan-400 font-black tracking-widest">CARICAMENTO…</div>
                     <div className="text-zinc-400 text-sm mt-2">Sto caricando gli eventi</div>
                 </div>
             </div>
@@ -313,7 +312,7 @@ export default function BookingPage() {
         <Modal
             opened={listinoOpen}
             onClose={() => setListinoOpen(false)}
-            title={<Text fw={900} className="tracking-tighter italic text-cyan-400">// LISTINO_PREMIUM</Text>}
+            title={<Text fw={900} className="tracking-tighter italic text-cyan-400">// LISTINO</Text>}
             centered
             size="lg"
             radius="0"
@@ -408,12 +407,7 @@ export default function BookingPage() {
                         </div>
 
                         <Group justify="center" mt="xl">
-                            <Button
-                                radius="0"
-                                color="cyan"
-                                className="uppercase font-black"
-                                onClick={() => nav("/staff-login")}
-                            >
+                            <Button radius="0" color="cyan" className="uppercase font-black" onClick={() => nav("/staff-login")}>
                                 Vai allo Staff
                             </Button>
                         </Group>
@@ -487,9 +481,7 @@ export default function BookingPage() {
                         {[1, 2, 3].map((s) => (
                             <div
                                 key={s}
-                                className={`h-1.5 transition-all ${
-                                    step >= s ? "bg-cyan-500 shadow-[0_0_10px_#06b6d4]" : "bg-zinc-800"
-                                }`}
+                                className={`h-1.5 transition-all ${step >= s ? "bg-cyan-500 shadow-[0_0_10px_#06b6d4]" : "bg-zinc-800"}`}
                             />
                         ))}
                     </Group>
@@ -527,7 +519,7 @@ export default function BookingPage() {
                                                     <img src={ePoster} className="absolute inset-0 w-full h-full object-cover" alt={e.title} />
                                                 ) : (
                                                     <div className="absolute inset-0 bg-zinc-900 grid place-items-center text-zinc-500 text-xs">
-                                                        NO POSTER
+                                                        NESSUN POSTER
                                                     </div>
                                                 )}
 
@@ -554,7 +546,7 @@ export default function BookingPage() {
                                         / Step 02 / Zona
                                     </Text>
                                     <Text size="xs" c="zinc.5" className="opacity-70">
-                                        {loadingAvailability ? "// loading availability…" : "//"}
+                                        {loadingAvailability ? "// caricamento disponibilità…" : "//"}
                                     </Text>
                                 </Group>
 
@@ -564,10 +556,7 @@ export default function BookingPage() {
                                         const ok = a > 0;
                                         const cls = ok ? "border-emerald-500/30 text-emerald-300" : "border-red-500/25 text-red-300";
                                         return (
-                                            <div
-                                                key={p.code}
-                                                className={`border bg-black/30 px-2 py-2 text-[10px] uppercase tracking-widest ${cls}`}
-                                            >
+                                            <div key={p.code} className={`border bg-black/30 px-2 py-2 text-[10px] uppercase tracking-widest ${cls}`}>
                                                 <div className="font-black">{p.label}</div>
                                                 <div className="opacity-80">{ok ? `${a} tavoli` : "esaurito"}</div>
                                             </div>
@@ -616,7 +605,7 @@ export default function BookingPage() {
                                             />
                                         </>
                                     ) : (
-                                        <div className="absolute inset-0 bg-zinc-900 grid place-items-center text-zinc-500 text-xs">NO POSTER</div>
+                                        <div className="absolute inset-0 bg-zinc-900 grid place-items-center text-zinc-500 text-xs">NESSUN POSTER</div>
                                     )}
                                     <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent z-20" />
                                 </div>
@@ -628,9 +617,9 @@ export default function BookingPage() {
                                         <SummaryRow label="Evento" value={selectedEvent.title} />
                                         <SummaryRow label="Data" value={eventDateLabel} />
                                         <SummaryRow label="Zona" value={selectedPackage.area} isHighlight />
-                                        <SummaryRow label="Referente" value={userData.name || "---"} />
+                                        <SummaryRow label="Referente" value={userData.name || "—"} />
                                         <SummaryRow label="Tavoli" value={`${tables}`} />
-                                        <SummaryRow label="Persone" value={`${totalPeople} Max`} />
+                                        <SummaryRow label="Persone" value={`${totalPeople} max`} />
                                     </div>
 
                                     <div className="bg-black/50 p-4 border border-zinc-800 text-center relative overflow-hidden group">
@@ -649,14 +638,9 @@ export default function BookingPage() {
                                         className="h-16 font-black uppercase tracking-widest transition-all hover:shadow-[0_0_30px_rgba(6,184,212,0.4)]"
                                         color="cyan"
                                         onClick={createReservation}
-                                        disabled={
-                                            !userData.name.trim() ||
-                                            !userData.phone.trim() ||
-                                            loadingAvailability ||
-                                            availability[pkg] < tables
-                                        }
+                                        disabled={!userData.name.trim() || !userData.phone.trim() || loadingAvailability || availability[pkg] < tables}
                                     >
-                                        Conferma Prenotazione
+                                        Conferma prenotazione
                                     </Button>
 
                                     <Text size="xs" c="zinc.5" className="opacity-70">
@@ -685,7 +669,7 @@ export default function BookingPage() {
                     <div className="flex gap-2">
                         {step > 1 && (
                             <Button radius="0" size="lg" variant="outline" color="zinc" onClick={prevStep} className="border-2 uppercase font-black">
-                                Back
+                                Indietro
                             </Button>
                         )}
                         <Button
@@ -694,7 +678,7 @@ export default function BookingPage() {
                             className="flex-1 uppercase font-black bg-cyan-600 shadow-[0_0_15px_rgba(8,145,178,0.4)]"
                             onClick={nextStep}
                         >
-                            {step === 2 ? "Review Order" : "Next Step"}
+                            {step === 2 ? "Vai al riepilogo" : "Avanti"}
                         </Button>
                     </div>
                 </div>
@@ -715,7 +699,7 @@ function DataFormSection({ tables, setTables, userData, setUserData, compact = f
             </div>
 
             <Text fw={900} size="xs" mb="xl" className="uppercase tracking-[0.4em] text-cyan-500 font-mono">
-                / Step 03 / Client Info
+                / Step 03 / Dati cliente
             </Text>
 
             <Stack gap="lg">
@@ -723,7 +707,7 @@ function DataFormSection({ tables, setTables, userData, setUserData, compact = f
                     <NumberInput
                         label={
                             <Text size="xs" fw={700} c="zinc.5" mb={4}>
-                                TABLES COUNT
+                                Numero tavoli
                             </Text>
                         }
                         value={tables}
@@ -737,10 +721,10 @@ function DataFormSection({ tables, setTables, userData, setUserData, compact = f
                     <TextInput
                         label={
                             <Text size="xs" fw={700} c="zinc.5" mb={4}>
-                                CLIENT NAME
+                                Nome cliente
                             </Text>
                         }
-                        placeholder="ENTER NAME"
+                        placeholder="Inserisci il nome"
                         value={userData.name}
                         onChange={(e) => setUserData({ ...userData, name: e.currentTarget.value })}
                         radius="0"
@@ -752,7 +736,7 @@ function DataFormSection({ tables, setTables, userData, setUserData, compact = f
                 <TextInput
                     label={
                         <Text size="xs" fw={700} c="zinc.5" mb={4}>
-                            WHATSAPP CONTACT
+                            Numero Telefono
                         </Text>
                     }
                     placeholder="3XX XXXXXXX"
@@ -766,10 +750,10 @@ function DataFormSection({ tables, setTables, userData, setUserData, compact = f
                 <Textarea
                     label={
                         <Text size="xs" fw={700} c="zinc.5" mb={4}>
-                            NOTES
+                            Note
                         </Text>
                     }
-                    placeholder="EXTRA DETAILS..."
+                    placeholder="Aggiungi eventuali note…"
                     value={userData.notes}
                     onChange={(e) => setUserData({ ...userData, notes: e.currentTarget.value })}
                     radius="0"
