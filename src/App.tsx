@@ -1,5 +1,5 @@
 // ✅ 1) PRIMA VARIABILE DEL FILE
-const ADMIN_PASSWORD = "test";
+
 
 import { useMemo, useState } from "react";
 import {
@@ -8,7 +8,7 @@ import {
     Card,
     Divider,
     Group,
-    Modal,
+
     NumberInput,
     SimpleGrid,
     Stack,
@@ -16,9 +16,8 @@ import {
     TextInput,
     Textarea,
     Title,
-    PasswordInput,
+
 } from "@mantine/core";
-import { useNavigate } from "react-router-dom";
 import FloorMap from "./components/FloorMap.tsx";
 
 // Importazione del logo dagli assets
@@ -42,7 +41,7 @@ const LogoHeader = () => (
 ======================= */
 export type PackageCode = "base" | "premium" | "elite";
 const BOOKING_TIME = "23:00";
-const MAX_PEOPLE_PER_TABLE = 6;
+
 
 const EVENTS = [
     { id: "thu", title: "Un Sorso di Parole", dateLabel: "GIO 22 GEN", vibe: "Talk & Wine" },
@@ -65,12 +64,10 @@ const euro = (n: number) => new Intl.NumberFormat("it-IT", { style: "currency", 
    MAIN APP
 ======================= */
 export default function App() {
-    const navigate = useNavigate();
     const [eventId, setEventId] = useState("fri");
     const [pkg, setPkg] = useState<PackageCode>("premium");
     const [tables, setTables] = useState<number>(1);
-    const [priceListOpen, setPriceListOpen] = useState(false);
-    const [adminOpen, setAdminOpen] = useState(false);
+
 
     const selectedPackage = useMemo(() => PACKAGES.find(p => p.code === pkg)!, [pkg]);
     const total = tables * selectedPackage.price;
@@ -87,7 +84,7 @@ export default function App() {
                         color="gray"
                         size="xs"
                         radius="xl"
-                        onClick={() => setAdminOpen(true)}
+
                         className="hover:bg-white/5 transition-colors border border-white/10"
                     >
                         Staff Login
@@ -147,7 +144,7 @@ export default function App() {
                                 <Text fw={900} size="xs" className="uppercase tracking-[0.4em] text-zinc-600 flex items-center gap-4 flex-1">
                                     02. Zona <div className="h-px flex-1 bg-white/5" />
                                 </Text>
-                                <Button variant="subtle" color="emerald" size="xs" onClick={() => setPriceListOpen(true)}>Listino Prezzi</Button>
+                                <Button variant="subtle" color="emerald" size="xs" >Listino Prezzi</Button>
                             </Group>
                             <SimpleGrid cols={{ base: 1, sm: 3 }} spacing="md">
                                 {PACKAGES.map(p => (
