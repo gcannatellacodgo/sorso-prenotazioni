@@ -370,7 +370,7 @@ export default function BookingPage() {
                         <Group gap="xs">
                             <img src={logoSorso} className="h-8" alt="Sorso Club" />
                             <Text fw={900} size="xl" className="tracking-tighter hidden sm:block">
-                                SORSO CLUB
+                                CLUB
                             </Text>
                         </Group>
 
@@ -446,7 +446,7 @@ export default function BookingPage() {
                     <Group gap="xs">
                         <img src={logoSorso} className="h-8" alt="Sorso Club" />
                         <Text fw={900} size="xl" className="tracking-tighter hidden sm:block">
-                            SORSO CLUB
+                            CLUB
                         </Text>
                     </Group>
 
