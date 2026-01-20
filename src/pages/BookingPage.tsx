@@ -74,9 +74,9 @@ type SummaryRowProps = {
 const PEOPLE_PER_TABLE = 6;
 
 const PACKAGES: PackageItem[] = [
-    { code: "base", label: "Base", price: 100, area: "Sala / Pedana", color: "cyan" },
-    { code: "premium", label: "Premium", price: 130, area: "Privé Rialzato", color: "grape" },
-    { code: "elite", label: "Élite", price: 160, area: "Top Privé DJ", color: "emerald" },
+    { code: "base", label: "Base", price: 100, area: "Sala", color: "cyan" },
+    { code: "premium", label: "Premium", price: 130, area: "Top Privé DJ", color: "grape" },
+    { code: "elite", label: "Élite", price: 160, area: "Privé Rialzato", color: "emerald" },
 ];
 
 const BOTTLE_LIST: Record<PackageCode, string[]> = {
