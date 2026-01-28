@@ -18,29 +18,31 @@ function Root() {
     const [menuOpened, setMenuOpened] = React.useState(false);
 
     return (
-        <BrowserRouter>
-            <MantineProvider defaultColorScheme="dark">
-               <div className=" h-full w-full overflow-hidden bg-black">
-                 <Notifications position="top-right" />
+     <BrowserRouter>
+      <MantineProvider defaultColorScheme="dark">
+        <div className="h-full w-full flex flex-col bg-black">
+          <Notifications position="top-right" />
 
-                {/* HEADER (apre il menu) */}
-                <HeaderOverlay onOpenMenu={() => setMenuOpened(true)} />
+          {/* HEADER */}
+          <HeaderOverlay onOpenMenu={() => setMenuOpened(true)} />
 
-                {/* APP */}
-                <App />
+          {/* APP → prende lo spazio rimanente */}
+          <div className="flex-1 overflow-hidden">
+            <App />
+          </div>
 
-                {/* MENU (si chiude) */}
-                <HomeMenuOverlay
-                    opened={menuOpened}
-                    onClose={() => setMenuOpened(false)}
-                />
-               </div>
-            </MantineProvider>
-        </BrowserRouter>
+          {/* MENU */}
+          <HomeMenuOverlay
+            opened={menuOpened}
+            onClose={() => setMenuOpened(false)}
+          />
+        </div>
+      </MantineProvider>
+    </BrowserRouter>
     );
 }
 ReactDOM.createRoot(document.getElementById("root")!).render(
     <React.StrictMode>
-        <Root/>
+        <Root />
     </React.StrictMode>
 );
