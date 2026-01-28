@@ -13,6 +13,7 @@ const items = [
     { label: "Foto ricordo", to: "/foto-ricordo" },
     { label: "Prenotazioni", to: "/prenotazioni" },
     { label: "Menù", to: "/menu" },
+    { label: "Staff", to: "/staff" },
 ];
 
 export default function HomeMenuOverlay({ opened, onClose }: Props) {

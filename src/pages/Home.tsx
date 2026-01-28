@@ -12,7 +12,7 @@ export default function Home() {
     const [menuOpened, setMenuOpened] = useState(false);
 
     return (
-        <div className=" h-screen w-full overflow-hidden">
+        <div className=" h-full w-full overflow-hidden">
             <VideoBackground />
 
             {/* OVERLAY */}

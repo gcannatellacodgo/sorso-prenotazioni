@@ -20,7 +20,8 @@ function Root() {
     return (
         <BrowserRouter>
             <MantineProvider defaultColorScheme="dark">
-                <Notifications position="top-right" />
+               <div className=" h-full w-full overflow-hidden bg-black">
+                 <Notifications position="top-right" />
 
                 {/* HEADER (apre il menu) */}
                 <HeaderOverlay onOpenMenu={() => setMenuOpened(true)} />
@@ -33,6 +34,7 @@ function Root() {
                     opened={menuOpened}
                     onClose={() => setMenuOpened(false)}
                 />
+               </div>
             </MantineProvider>
         </BrowserRouter>
     );

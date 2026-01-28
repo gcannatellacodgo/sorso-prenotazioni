@@ -10,7 +10,7 @@ type Props = {
 
 export default function HeaderOverlay({ onOpenMenu }: Props) {
     return (
-        <div className="pointer-events-auto flex items-start justify-between px-6 pt-6">
+        <div className="relative z-50 pointer-events-auto flex items-start justify-between w-full px-6 pt-6">
             {/* SOCIAL */}
             <Group gap={10}>
                 <ActionIcon
