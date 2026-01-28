@@ -3,6 +3,7 @@ import { Button, Card, Stack, Text, TextInput } from "@mantine/core";
 
 import { useNavigate } from "react-router-dom";
 import {supabase} from "../api/lib/supabase.ts";
+import { emit } from "../utility/AppEvents.ts";
 
 export default function StaffLogin() {
     const [email, setEmail] = useState("");
@@ -24,7 +25,7 @@ export default function StaffLogin() {
             alert("Credenziali non valide");
             return;
         }
-
+        emit("user:login")
         navigate("/admin");
     };
 

@@ -2,12 +2,13 @@ import { Modal, ActionIcon } from "@mantine/core";
 import { IconX } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import logo from '../assest/logo.svg'
+import {on} from "../utility/AppEvents.ts";
 type Props = {
     opened: boolean;
     onClose: () => void;
 };
 
-const items = [
+let items = [
     { label: "Home", to: "/" },
     { label: "About", to: "/about" },
     { label: "Foto ricordo", to: "/foto-ricordo" },
@@ -16,6 +17,13 @@ const items = [
     { label: "Staff", to: "/staff" },
 ];
 
+
+on("user:login", ()=>{
+    items.push({ label: "Esci", to: "/logout" },)
+})
+on("user:logout", ()=>{
+    items = items.filter(item => item.label !== "Esci")
+})
 export default function HomeMenuOverlay({ opened, onClose }: Props) {
     const navigate = useNavigate();
 

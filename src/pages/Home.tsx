@@ -1,15 +1,12 @@
-import { useState } from "react";
-
 
 import VideoBackground from "../components/VideoBackground";
-import HomeMenuOverlay from "../components/HomeMenuOverlay";
 
 
 import logo from "../assest/logo.svg";
 import {ContactActions} from "../components/ContactActions.tsx";
 
 export default function Home() {
-    const [menuOpened, setMenuOpened] = useState(false);
+
 
     return (
         <div className=" h-full w-full overflow-hidden">
@@ -37,11 +34,8 @@ export default function Home() {
                 </div>
             </div>
 
-            {/* MENU OVERLAY */}
-            <HomeMenuOverlay
-                opened={menuOpened}
-                onClose={() => setMenuOpened(false)}
-            />
+
+
         </div>
     );
 }
