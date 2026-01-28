@@ -60,6 +60,7 @@ type DataFormSectionProps = {
     userData: UserData;
     setUserData: (u: UserData) => void;
     compact?: boolean;
+    selectEvent:SupabaseEvent
 };
 
 type SummaryRowProps = {
@@ -578,7 +579,7 @@ export default function BookingPage() {
                         )}
 
                         {!isDesktop && step === 3 && (
-                            <DataFormSection tables={tables} setTables={setTables} userData={userData} setUserData={setUserData} />
+                            <DataFormSection tables={tables} setTables={setTables} userData={userData} setUserData={setUserData} selectEvent={selectedEvent} />
                         )}
                     </Stack>
 
@@ -586,7 +587,7 @@ export default function BookingPage() {
                     {(isDesktop || step === 3) && (
                         <Stack className={isDesktop ? "lg:sticky lg:top-28" : ""} gap="xl">
                             {isDesktop && (
-                                <DataFormSection tables={tables} setTables={setTables} userData={userData} setUserData={setUserData} compact />
+                                <DataFormSection  tables={tables} setTables={setTables} userData={userData} setUserData={setUserData} compact selectEvent={selectedEvent} />
                             )}
 
                             <Card radius="0" p={0} className="bg-zinc-900/50 border border-zinc-800 backdrop-blur-xl overflow-hidden shadow-2xl">
@@ -618,17 +619,17 @@ export default function BookingPage() {
                                         <SummaryRow label="Data" value={eventDateLabel} />
                                         <SummaryRow label="Zona" value={selectedPackage.area} isHighlight />
                                         <SummaryRow label="Referente" value={userData.name || "—"} />
-                                        <SummaryRow label="Tavoli" value={`${tables}`} />
-                                        <SummaryRow label="Persone" value={`${totalPeople} max`} />
+                                        {selectedEvent.title === 'FestivalBar' || selectedEvent.title === 'Live Band Aperitivo'?<div></div>:<SummaryRow label="Tavoli" value={`${tables}`} />}
+                                        {selectedEvent.title === 'FestivalBar' || selectedEvent.title === 'Live Band Aperitivo'?<div></div>:<SummaryRow label="Persone" value={`${totalPeople} max`} />}
                                     </div>
 
                                     <div className="bg-black/50 p-4 border border-zinc-800 text-center relative overflow-hidden group">
                                         <div className="absolute inset-0 bg-cyan-500/5 translate-y-full group-hover:translate-y-0 transition-transform" />
-                                        <Text size="xs" c="zinc.5" className="uppercase tracking-widest mb-1 relative z-10">
+                                        {selectedEvent.title === 'FestivalBar' || selectedEvent.title === 'Live Band Aperitivo'?<div></div>:<Text size="xs" c="zinc.5" className="uppercase tracking-widest mb-1 relative z-10">
                                             Totale dovuto
-                                        </Text>
-                                        <Text fw={900} size="42px" className="text-white tracking-tighter tabular-nums relative z-10">
-                                            {euro(totalEuro)}
+                                            </Text>}
+                                         <Text fw={900} size="42px" className="text-white tracking-tighter tabular-nums relative z-10">
+                                             {selectedEvent.title === 'FestivalBar' || selectedEvent.title === 'Live Band Aperitivo'?'Questo evento non prevede la bottiglia':euro(totalEuro)}
                                         </Text>
                                     </div>
 
@@ -691,7 +692,8 @@ export default function BookingPage() {
    COMPONENTI DI SUPPORTO
 ======================= */
 
-function DataFormSection({ tables, setTables, userData, setUserData, compact = false }: DataFormSectionProps) {
+function DataFormSection({tables, setTables, userData, setUserData, compact = false, selectEvent}: DataFormSectionProps) {
+
     return (
         <section className={`bg-zinc-900/30 border border-zinc-800 relative shadow-lg ${compact ? "p-5" : "p-8"}`}>
             <div className="absolute top-0 right-0 p-2">
@@ -706,9 +708,7 @@ function DataFormSection({ tables, setTables, userData, setUserData, compact = f
                 <SimpleGrid cols={{ base: 1, sm: 2 }} spacing="lg">
                     <NumberInput
                         label={
-                            <Text size="xs" fw={700} c="zinc.5" mb={4}>
-                                Numero tavoli
-                            </Text>
+                            selectEvent.title === 'FestivalBar' || selectEvent.title === 'Live Band Aperitivo'?<Text size="xs" fw={700} c="zinc.5" mb={4}>Numero persone</Text>: <Text size="xs" fw={700} c="zinc.5" mb={4}>Numero tavoli</Text>
                         }
                         value={tables}
                         onChange={(v) => setTables(typeof v === "number" ? v : Number(v))}

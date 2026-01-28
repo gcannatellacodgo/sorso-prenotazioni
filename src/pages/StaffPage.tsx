@@ -53,7 +53,8 @@ type ReservationRow = {
     status: string;
 };
 
-const euro = (n: number) => new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
+const euro = (n: number) =>
+    new Intl.NumberFormat("it-IT", { style: "currency", currency: "EUR" }).format(n);
 
 function fmtDateISO(dateISO: string) {
     const d = new Date(dateISO + "T00:00:00");
@@ -68,7 +69,34 @@ function safeNumber(v: unknown, fallback = 0) {
     return Number.isFinite(n) ? n : fallback;
 }
 
-function toISODate(d: Date) {
+/**
+ * FIX: DateInput a volte ritorna valori non Date (string/obj dayjs ecc).
+ * Normalizziamo sempre qui.
+ */
+function normalizeDate(input: unknown): Date {
+    if (input instanceof Date) {
+        if (!Number.isNaN(input.getTime())) return input;
+        throw new Error("Data non valida");
+    }
+
+    if (typeof input === "string" || typeof input === "number") {
+        const d = new Date(input);
+        if (!Number.isNaN(d.getTime())) return d;
+        throw new Error("Data non valida");
+    }
+
+    // Supporto per oggetti tipo dayjs/moment che espongono .toDate()
+    if (typeof input === "object" && input) {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        const maybe = (input as any)?.toDate?.();
+        if (maybe instanceof Date && !Number.isNaN(maybe.getTime())) return maybe;
+    }
+
+    throw new Error("Data non valida");
+}
+
+function toISODate(input: unknown) {
+    const d = normalizeDate(input);
     const yyyy = d.getFullYear();
     const mm = String(d.getMonth() + 1).padStart(2, "0");
     const dd = String(d.getDate()).padStart(2, "0");
@@ -90,7 +118,10 @@ export default function StaffPage() {
     const [events, setEvents] = useState<StaffEvent[]>([]);
     const [selectedEventId, setSelectedEventId] = useState<string | null>(null);
 
-    const selectedEvent = useMemo(() => events.find((e) => e.id === selectedEventId) ?? null, [events, selectedEventId]);
+    const selectedEvent = useMemo(
+        () => events.find((e) => e.id === selectedEventId) ?? null,
+        [events, selectedEventId]
+    );
 
     const [availability, setAvailability] = useState<Record<PackageCode, AvailabilityRow>>({
         base: { package: "base", total_tables: 0, booked_tables: 0 },
@@ -208,7 +239,11 @@ export default function StaffPage() {
         setLoading(true);
         try {
             // disponibilità
-            const { data: a, error: e1 } = await supabase.from("event_packages").select("package, total_tables, booked_tables").eq("event_id", eventId);
+            const { data: a, error: e1 } = await supabase
+                .from("event_packages")
+                .select("package, total_tables, booked_tables")
+                .eq("event_id", eventId);
+
             if (e1) throw e1;
 
             const map: Record<PackageCode, AvailabilityRow> = {
@@ -293,7 +328,11 @@ export default function StaffPage() {
         for (let i = 1; i <= pageCount; i++) {
             doc.setPage(i);
             doc.setFontSize(8);
-            doc.text(`Pagina ${i} di ${pageCount}`, doc.internal.pageSize.getWidth() - 30, doc.internal.pageSize.getHeight() - 10);
+            doc.text(
+                `Pagina ${i} di ${pageCount}`,
+                doc.internal.pageSize.getWidth() - 30,
+                doc.internal.pageSize.getHeight() - 10
+            );
         }
 
         const filename = `prenotazioni_${selectedEvent.date}.pdf`;
@@ -311,7 +350,8 @@ export default function StaffPage() {
 
         try {
             const dateISO = toISODate(newDate);
-            const code = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][newDate.getDay()];
+            const d = normalizeDate(newDate); // per getDay() sicuro
+            const code = ["sun", "mon", "tue", "wed", "thu", "fri", "sat"][d.getDay()];
 
             const { data: created, error: e1 } = await supabase
                 .from("events")
@@ -470,7 +510,9 @@ export default function StaffPage() {
                         />
                     </>
                 ) : (
-                    <div className="absolute inset-0 bg-zinc-900 grid place-items-center text-zinc-500 text-xs">Nessuna copertina</div>
+                    <div className="absolute inset-0 bg-zinc-900 grid place-items-center text-zinc-500 text-xs">
+                        Nessuna copertina
+                    </div>
                 )}
                 <div className="absolute inset-0 bg-gradient-to-t from-zinc-900 to-transparent z-20" />
             </div>
@@ -490,7 +532,6 @@ export default function StaffPage() {
             </Group>
         </Card>
     );
-
 
     return (
         <div className="min-h-screen bg-[#0a0a0a] text-white font-sans selection:bg-cyan-500/30">
@@ -569,7 +610,13 @@ export default function StaffPage() {
                                                     </Text>
                                                 </div>
 
-                                                <Button radius="0" variant="outline" color={selectedEvent.active ? "red" : "green"} onClick={toggleActive} disabled={loading}>
+                                                <Button
+                                                    radius="0"
+                                                    variant="outline"
+                                                    color={selectedEvent.active ? "red" : "green"}
+                                                    onClick={toggleActive}
+                                                    disabled={loading}
+                                                >
                                                     {selectedEvent.active ? "Disattiva" : "Attiva"}
                                                 </Button>
                                             </Group>
@@ -603,9 +650,14 @@ export default function StaffPage() {
                                         <DateInput
                                             label="Data"
                                             value={newDate}
-                                            /* eslint-disable-next-line @typescript-eslint/ban-ts-comment */
-                                            // @ts-expect-error
-                                            onChange={setNewDate}
+                                            onChange={(val) => {
+                                                if (!val) return setNewDate(null);
+                                                try {
+                                                    setNewDate(normalizeDate(val));
+                                                } catch {
+                                                    setNewDate(null);
+                                                }
+                                            }}
                                             valueFormat="DD/MM/YYYY"
                                             placeholder="Seleziona una data"
                                             locale="it"
@@ -641,7 +693,13 @@ export default function StaffPage() {
                                         <NumberInput label="Élite" min={0} value={totElite} onChange={(v) => setTotElite(safeNumber(v))} />
                                     </SimpleGrid>
 
-                                    <Button color="cyan" radius="0" className="font-black uppercase" onClick={createEvent} disabled={loading || creatingRef.current}>
+                                    <Button
+                                        color="cyan"
+                                        radius="0"
+                                        className="font-black uppercase"
+                                        onClick={createEvent}
+                                        disabled={loading || creatingRef.current}
+                                    >
                                         Crea evento
                                     </Button>
                                 </Stack>
@@ -773,7 +831,8 @@ export default function StaffPage() {
                                                 Tavoli per pacchetto
                                             </Text>
                                             <Text size="sm">
-                                                Base: <b>{totals.byPkg.base.tables}</b> • Premium: <b>{totals.byPkg.premium.tables}</b> • Élite: <b>{totals.byPkg.elite.tables}</b>
+                                                Base: <b>{totals.byPkg.base.tables}</b> • Premium: <b>{totals.byPkg.premium.tables}</b> • Élite:{" "}
+                                                <b>{totals.byPkg.elite.tables}</b>
                                             </Text>
                                         </div>
                                     </Group>
@@ -785,13 +844,7 @@ export default function StaffPage() {
                                             Tabella prenotazioni
                                         </Text>
 
-                                        <Button
-                                            radius="0"
-                                            variant="outline"
-                                            color="cyan"
-                                            onClick={exportReservationsPdf}
-                                            disabled={reservations.length === 0}
-                                        >
+                                        <Button radius="0" variant="outline" color="cyan" onClick={exportReservationsPdf} disabled={reservations.length === 0}>
                                             Esporta PDF
                                         </Button>
                                     </Group>
