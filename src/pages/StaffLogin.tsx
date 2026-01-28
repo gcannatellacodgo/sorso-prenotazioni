@@ -25,7 +25,7 @@ export default function StaffLogin() {
             return;
         }
 
-        navigate("/staff");
+        navigate("/admin");
     };
 
     return (

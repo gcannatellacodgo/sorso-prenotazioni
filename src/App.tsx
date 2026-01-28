@@ -2,6 +2,7 @@ import { Routes, Route } from "react-router-dom";
 import Home from "./pages/Home.tsx";
 import About from "./pages/About.tsx";
 import StaffLogin from "./pages/StaffLogin.tsx";
+import AdminPage from "./pages/AdminPage.tsx";
 
 
 
@@ -11,6 +12,7 @@ export default function App() {
             <Route path="/" element={<Home />} />
             <Route path="/about" element={<About />} />
             <Route path="/staff" element={<StaffLogin />} />
+            <Route path="/admin" element={<AdminPage />} />
         </Routes>
     );
 }
