@@ -23,11 +23,19 @@ export const supabase = createClient(supabaseUrl, supabaseAnonKey, {
 /** =========================
  *  TYPES
  *  ========================= */
+
 export type StorageFile = {
     path: string;
     name: string;
 };
 
+/** item restituito da storage.list */
+type StorageListItem = {
+    name: string;
+    id: string | null;
+};
+
+/** opzioni list */
 type ListOptions = {
     limit?: number;
     offset?: number;
@@ -42,9 +50,16 @@ type ListOptions = {
  *  ========================= */
 export const StorageApi = {
     /** Lista solo 1 livello (NON ricorsivo) */
-    async list(bucket: string, path = "", options: ListOptions = {}) {
-        const { limit = 100, offset = 0, sortBy = { column: "name", order: "asc" } } =
-            options;
+    async list(
+        bucket: string,
+        path = "",
+        options: ListOptions = {}
+    ): Promise<StorageListItem[]> {
+        const {
+            limit = 100,
+            offset = 0,
+            sortBy = { column: "name", order: "asc" },
+        } = options;
 
         const { data, error } = await supabase.storage.from(bucket).list(path, {
             limit,
@@ -53,14 +68,17 @@ export const StorageApi = {
         });
 
         if (error) throw error;
-        return data ?? [];
+        return (data ?? []) as StorageListItem[];
     },
 
     /** Lista TUTTI i file in una cartella (ricorsivo + paginazione) */
-    async listAllFilesRecursive(bucket: string, rootPath = ""): Promise<StorageFile[]> {
+    async listAllFilesRecursive(
+        bucket: string,
+        rootPath = ""
+    ): Promise<StorageFile[]> {
         const files: StorageFile[] = [];
 
-        async function walk(path: string) {
+        async function walk(path: string): Promise<void> {
             let offset = 0;
             const limit = 100;
 
@@ -74,20 +92,20 @@ export const StorageApi = {
                 if (error) throw error;
                 if (!data || data.length === 0) break;
 
-                for (const item of data) {
+                const items = data as StorageListItem[];
+
+                for (const item of items) {
                     const fullPath = path ? `${path}/${item.name}` : item.name;
 
-                    // In storage.list le cartelle spesso hanno id null
-                    const isFolder = (item as any).id === null;
-
-                    if (isFolder) {
+                    // id === null → cartella
+                    if (item.id === null) {
                         await walk(fullPath);
                     } else {
                         files.push({ path: fullPath, name: item.name });
                     }
                 }
 
-                if (data.length < limit) break;
+                if (items.length < limit) break;
                 offset += limit;
             }
         }
@@ -97,13 +115,17 @@ export const StorageApi = {
     },
 
     /** Public URL (bucket public) */
-    getPublicUrl(bucket: string, path: string) {
+    getPublicUrl(bucket: string, path: string): string {
         const { data } = supabase.storage.from(bucket).getPublicUrl(path);
         return data.publicUrl;
     },
 
     /** Signed URL (bucket private) */
-    async createSignedUrl(bucket: string, path: string, expiresInSeconds = 60) {
+    async createSignedUrl(
+        bucket: string,
+        path: string,
+        expiresInSeconds = 60
+    ): Promise<string> {
         const { data, error } = await supabase.storage
             .from(bucket)
             .createSignedUrl(path, expiresInSeconds);
@@ -113,7 +135,12 @@ export const StorageApi = {
     },
 
     /** Upload file */
-    async upload(bucket: string, path: string, file: File, upsert = true) {
+    async upload(
+        bucket: string,
+        path: string,
+        file: File,
+        upsert = true
+    ): Promise<{ path: string }> {
         const { data, error } = await supabase.storage.from(bucket).upload(path, file, {
             upsert,
             cacheControl: "3600",
@@ -121,14 +148,14 @@ export const StorageApi = {
         });
 
         if (error) throw error;
-        return data;
+        return { path: data.path };
     },
 
     /** Remove (uno o più file) */
-    async remove(bucket: string, paths: string[]) {
+    async remove(bucket: string, paths: string[]): Promise<number> {
         const { data, error } = await supabase.storage.from(bucket).remove(paths);
         if (error) throw error;
-        return data;
+        return data?.length ?? 0;
     },
 };
 
@@ -137,11 +164,17 @@ export const StorageApi = {
  *  ========================= */
 export const DbApi = {
     /** Select semplice */
-    async select<T = any>(table: string, columns = "*", filters?: Record<string, any>) {
+    async select<T = unknown>(
+        table: string,
+        columns = "*",
+        filters?: Record<string, unknown>
+    ): Promise<T[]> {
         let q = supabase.from(table).select(columns);
 
         if (filters) {
-            for (const [k, v] of Object.entries(filters)) q = q.eq(k, v);
+            for (const [k, v] of Object.entries(filters)) {
+                q = q.eq(k, v);
+            }
         }
 
         const { data, error } = await q;
@@ -150,16 +183,26 @@ export const DbApi = {
     },
 
     /** Insert */
-    async insert<T = any>(table: string, payload: any) {
+    async insert<T = unknown>(
+        table: string,
+        payload: unknown
+    ): Promise<T[]> {
         const { data, error } = await supabase.from(table).insert(payload).select();
         if (error) throw error;
         return data as T[];
     },
 
     /** Update */
-    async update<T = any>(table: string, payload: any, match: Record<string, any>) {
+    async update<T = unknown>(
+        table: string,
+        payload: unknown,
+        match: Record<string, unknown>
+    ): Promise<T[]> {
         let q = supabase.from(table).update(payload);
-        for (const [k, v] of Object.entries(match)) q = q.eq(k, v);
+
+        for (const [k, v] of Object.entries(match)) {
+            q = q.eq(k, v);
+        }
 
         const { data, error } = await q.select();
         if (error) throw error;
@@ -167,13 +210,18 @@ export const DbApi = {
     },
 
     /** Delete */
-    async remove(table: string, match: Record<string, any>) {
+    async remove(
+        table: string,
+        match: Record<string, unknown>
+    ): Promise<void> {
         let q = supabase.from(table).delete();
-        for (const [k, v] of Object.entries(match)) q = q.eq(k, v);
 
-        const { data, error } = await q;
+        for (const [k, v] of Object.entries(match)) {
+            q = q.eq(k, v);
+        }
+
+        const { error } = await q;
         if (error) throw error;
-        return data;
     },
 };
 
@@ -181,7 +229,10 @@ export const DbApi = {
  *  RPC API
  *  ========================= */
 export const RpcApi = {
-    async call<T = any>(fn: string, args?: Record<string, any>) {
+    async call<T = unknown>(
+        fn: string,
+        args?: Record<string, unknown>
+    ): Promise<T> {
         const { data, error } = await supabase.rpc(fn, args);
         if (error) throw error;
         return data as T;
@@ -191,21 +242,38 @@ export const RpcApi = {
 /** =========================
  *  AUTH API
  *  ========================= */
+
+type SupabaseSession = {
+    user: {
+        id?: string;
+        email?: string;
+    } | null;
+    access_token?: string;
+    refresh_token?: string;
+    expires_at?: number;
+};
+
 export const AuthApi = {
-    async signInWithPassword(email: string, password: string) {
-        const { data, error } = await supabase.auth.signInWithPassword({ email, password });
+    async signInWithPassword(
+        email: string,
+        password: string
+    ): Promise<SupabaseSession> {
+        const { data, error } = await supabase.auth.signInWithPassword({
+            email,
+            password,
+        });
         if (error) throw error;
-        return data;
+        return data as SupabaseSession;
     },
 
-    async signOut() {
+    async signOut(): Promise<void> {
         const { error } = await supabase.auth.signOut();
         if (error) throw error;
     },
 
-    async getSession() {
+    async getSession(): Promise<SupabaseSession | null> {
         const { data, error } = await supabase.auth.getSession();
         if (error) throw error;
-        return data.session;
+        return data.session as SupabaseSession | null;
     },
 };

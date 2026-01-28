@@ -1,4 +1,6 @@
-import { StorageApi, DbApi, RpcApi, AuthApi } from "@/lib/supabase";
+// src/services/supabase.service.ts
+
+import { StorageApi, DbApi, RpcApi, AuthApi } from "./lib/supabase.ts";
 import type {
     ApiResult,
     StorageFolderResult,
@@ -12,15 +14,36 @@ import type {
     AuthSessionResult,
 } from "./supabase.types";
 
+/** =========================
+ *  INTERNAL TYPES (no-any)
+ *  ========================= */
+
+// Minimal shape returned by supabase.storage.list(...)
+type StorageListItem = {
+    name: string;
+    id: string | null; // null => folder, string => file
+};
+
+// Minimal session shape (kept generic to avoid importing supabase-js types here)
+type SupabaseSession = {
+    user: {
+        id?: string;
+        email?: string;
+    } | null;
+    access_token?: string;
+    refresh_token?: string;
+    expires_at?: number;
+};
+
 /** helper: estrai estensione */
-function getExt(name: string) {
+function getExt(name: string): string {
     return name.split(".").pop()?.toLowerCase() ?? "";
 }
 
 /** helper: uniforma errori */
-function toErrorMessage(e: unknown) {
+function toErrorMessage(e: unknown): string {
     if (typeof e === "string") return e;
-    if (e && typeof e === "object" && "message" in e) return String((e as any).message);
+    if (e instanceof Error) return e.message;
     try {
         return JSON.stringify(e);
     } catch {
@@ -44,12 +67,12 @@ export const SupabaseService = {
         folder = ""
     ): Promise<ApiResult<StorageFolderResult>> {
         try {
-            const items = await StorageApi.list(bucket, folder);
+            const items = (await StorageApi.list(bucket, folder)) as StorageListItem[];
 
             const files: StorageFileItem[] = items
-                // item.id === null -> folder (come da comportamento comune list())
-                .filter((it: any) => it?.id !== null)
-                .map((it: any) => {
+                // id === null => folder, id !== null => file
+                .filter((it) => it.id !== null)
+                .map((it) => {
                     const path = folder ? `${folder}/${it.name}` : it.name;
                     return {
                         name: it.name,
@@ -81,7 +104,7 @@ export const SupabaseService = {
         try {
             const rawFiles = await StorageApi.listAllFilesRecursive(bucket, folder);
 
-            const files: StorageFileItem[] = rawFiles.map((f) => ({
+            const files: StorageFileItem[] = rawFiles.map((f: { name: string; path: string; }) => ({
                 name: f.name,
                 path: f.path,
                 extension: getExt(f.name),
@@ -103,7 +126,7 @@ export const SupabaseService = {
     },
 
     /** Public URL (bucket public) */
-    getPublicUrl(bucket: string, path: string) {
+    getPublicUrl(bucket: string, path: string): string {
         return StorageApi.getPublicUrl(bucket, path);
     },
 
@@ -140,7 +163,7 @@ export const SupabaseService = {
     async remove(bucket: string, paths: string[]): Promise<ApiResult<{ removed: number }>> {
         try {
             const res = await StorageApi.remove(bucket, paths);
-            return { ok: true, data: { removed: res?.length ?? 0 } };
+            return { ok: true, data: { removed: res ?? 0 } };
         } catch (e) {
             return { ok: false, error: toErrorMessage(e) };
         }
@@ -150,7 +173,7 @@ export const SupabaseService = {
      *  DB
      *  ========================= */
 
-    async dbSelect<T = any>(params: DbSelectParams): Promise<ApiResult<T[]>> {
+    async dbSelect<T = unknown>(params: DbSelectParams): Promise<ApiResult<T[]>> {
         try {
             const data = await DbApi.select<T>(params.table, params.columns ?? "*", params.filters);
             return { ok: true, data };
@@ -159,7 +182,7 @@ export const SupabaseService = {
         }
     },
 
-    async dbInsert<T = any>(params: DbInsertParams): Promise<ApiResult<T[]>> {
+    async dbInsert<T = unknown>(params: DbInsertParams): Promise<ApiResult<T[]>> {
         try {
             const data = await DbApi.insert<T>(params.table, params.payload);
             return { ok: true, data };
@@ -168,7 +191,7 @@ export const SupabaseService = {
         }
     },
 
-    async dbUpdate<T = any>(params: DbUpdateParams): Promise<ApiResult<T[]>> {
+    async dbUpdate<T = unknown>(params: DbUpdateParams): Promise<ApiResult<T[]>> {
         try {
             const data = await DbApi.update<T>(params.table, params.payload, params.match);
             return { ok: true, data };
@@ -177,10 +200,10 @@ export const SupabaseService = {
         }
     },
 
-    async dbDelete(params: DbDeleteParams): Promise<ApiResult<any>> {
+    async dbDelete(params: DbDeleteParams): Promise<ApiResult<null>> {
         try {
-            const data = await DbApi.remove(params.table, params.match);
-            return { ok: true, data };
+            await DbApi.remove(params.table, params.match);
+            return { ok: true, data: null };
         } catch (e) {
             return { ok: false, error: toErrorMessage(e) };
         }
@@ -190,7 +213,7 @@ export const SupabaseService = {
      *  RPC
      *  ========================= */
 
-    async rpcCall<T = any>(params: RpcCallParams): Promise<ApiResult<T>> {
+    async rpcCall<T = unknown>(params: RpcCallParams): Promise<ApiResult<T>> {
         try {
             const data = await RpcApi.call<T>(params.fn, params.args);
             return { ok: true, data };
@@ -203,10 +226,27 @@ export const SupabaseService = {
      *  AUTH
      *  ========================= */
 
-    async signInWithPassword(params: AuthSignInParams): Promise<ApiResult<any>> {
+    async signInWithPassword(params: AuthSignInParams): Promise<ApiResult<AuthSessionResult>> {
         try {
-            const data = await AuthApi.signInWithPassword(params.email, params.password);
-            return { ok: true, data };
+            const session = (await AuthApi.signInWithPassword(
+                params.email,
+                params.password
+            )) as SupabaseSession;
+
+            return {
+                ok: true,
+                data: {
+                    user: session.user
+                        ? {
+                            id: session.user.id,
+                            email: session.user.email,
+                        }
+                        : null,
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token,
+                    expires_at: session.expires_at,
+                },
+            };
         } catch (e) {
             return { ok: false, error: toErrorMessage(e) };
         }
@@ -223,19 +263,22 @@ export const SupabaseService = {
 
     async getSession(): Promise<ApiResult<AuthSessionResult>> {
         try {
-            const session = await AuthApi.getSession();
-            if (!session) return { ok: true, data: { user: null } };
+            const session = (await AuthApi.getSession()) as SupabaseSession | null;
+
+            if (!session || !session.user) {
+                return { ok: true, data: { user: null } };
+            }
 
             return {
                 ok: true,
                 data: {
                     user: {
-                        id: (session.user as any)?.id,
-                        email: (session.user as any)?.email,
+                        id: session.user.id,
+                        email: session.user.email,
                     },
-                    access_token: (session as any)?.access_token,
-                    refresh_token: (session as any)?.refresh_token,
-                    expires_at: (session as any)?.expires_at,
+                    access_token: session.access_token,
+                    refresh_token: session.refresh_token,
+                    expires_at: session.expires_at,
                 },
             };
         } catch (e) {
@@ -244,10 +287,10 @@ export const SupabaseService = {
     },
 };
 
+/*
+Esempio:
 
-
-
-
-/*const res = await SupabaseService.listFolderRecursive("sorso-prenotazioni", "video");
+const res = await SupabaseService.listFolderRecursive("sorso-prenotazioni", "video");
 if (!res.ok) console.error(res.error);
-else console.log(res.data.files);*/
+else console.log(res.data.files);
+*/

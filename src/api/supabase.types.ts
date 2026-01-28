@@ -36,35 +36,39 @@ export type StorageFolderResult = {
  *  DB TYPES
  *  ========================= */
 
-export type DbSelectParams = {
+/**
+ * Parametri per select generica
+ * T = tipo del record restituito
+ */
+export type DbSelectParams<TFilters = Record<string, unknown>> = {
     table: string;
     columns?: string; // default "*"
-    filters?: Record<string, any>;
+    filters?: TFilters;
 };
 
-export type DbInsertParams = {
+export type DbInsertParams<TPayload = unknown> = {
     table: string;
-    payload: any;
+    payload: TPayload;
 };
 
-export type DbUpdateParams = {
+export type DbUpdateParams<TPayload = unknown, TMatch = Record<string, unknown>> = {
     table: string;
-    payload: any;
-    match: Record<string, any>;
+    payload: TPayload;
+    match: TMatch;
 };
 
-export type DbDeleteParams = {
+export type DbDeleteParams<TMatch = Record<string, unknown>> = {
     table: string;
-    match: Record<string, any>;
+    match: TMatch;
 };
 
 /** =========================
  *  RPC TYPES
  *  ========================= */
 
-export type RpcCallParams = {
+export type RpcCallParams<TArgs = Record<string, unknown>> = {
     fn: string;
-    args?: Record<string, any>;
+    args?: TArgs;
 };
 
 /** =========================
