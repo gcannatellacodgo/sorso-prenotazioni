@@ -30,7 +30,7 @@ export default function StaffLogin() {
     };
 
     return (
-        <div className="min-h-screen bg-black grid place-items-center px-4">
+        <div className="min-h-full bg-black grid place-items-center px-4">
             <Card radius="lg" p="xl" className="w-full max-w-sm bg-zinc-900 border border-zinc-800">
                 <Stack>
                     <Text fw={900} size="lg">
