@@ -14,6 +14,7 @@ import App from "./App.tsx";
 import HeaderOverlay from "./components/HeaderOverlay.tsx";
 import HomeMenuOverlay from "./components/HomeMenuOverlay.tsx";
 
+// eslint-disable-next-line react-refresh/only-export-components
 function Root() {
     const [menuOpened, setMenuOpened] = React.useState(false);
 
@@ -27,7 +28,7 @@ function Root() {
           <HeaderOverlay onOpenMenu={() => setMenuOpened(true)} />
 
           {/* APP → prende lo spazio rimanente */}
-          <div className="flex-1 overflow-hidden">
+          <div className="flex-1">
             <App />
           </div>
 

@@ -1,5 +1,4 @@
 import { Modal, ActionIcon } from "@mantine/core";
-import { IconX } from "@tabler/icons-react";
 import { useNavigate } from "react-router-dom";
 import logo from '../assest/logo.svg'
 import {on} from "../utility/AppEvents.ts";
@@ -11,7 +10,7 @@ type Props = {
 let items = [
     { label: "Home", to: "/" },
     { label: "About", to: "/about" },
-    { label: "Foto ricordo", to: "/foto-ricordo" },
+    { label: "FotoPage ricordo", to: "/foto" },
     { label: "Prenotazioni", to: "/prenotazioni" },
     { label: "Menù", to: "/menu" },
     { label: "Staff", to: "/staff" },
@@ -75,7 +74,11 @@ export default function HomeMenuOverlay({ opened, onClose }: Props) {
                             className="text-white hover:bg-white/10"
                             aria-label="Chiudi"
                         >
-                            <IconX size={22} />
+                            <img
+                                src={logo}
+                                alt="Sørso"
+                                className="w-[100px] md:w-[200px] drop-shadow"
+                            />
                         </ActionIcon>
                     </div>
 

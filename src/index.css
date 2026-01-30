@@ -2,3 +2,30 @@
 html, body, #root {
     height: 100%;
 }
+
+:root {
+    --safe-top: env(safe-area-inset-top, 0px);
+    --safe-bottom: env(safe-area-inset-bottom, 0px);
+
+    /* fallback Android: se safe-area è 0 ma sei fullscreen/edge-to-edge */
+    --android-fallback-top: 24px;
+}
+
+/* wrapper principale della tua app */
+body {
+    margin: 0;
+    background: #000;
+}
+
+/* se vuoi che TUTTA la UI stia sotto la status bar */
+.app-safe {
+    padding-top: max(var(--safe-top), var(--android-fallback-top));
+    padding-bottom: var(--safe-bottom);
+    min-height: 100vh;
+    box-sizing: border-box;
+}
+
+/* se hai elementi fixed full-screen (tipo video bg) */
+.video-bg {
+    top: max(var(--safe-top), var(--android-fallback-top)) !important;
+}

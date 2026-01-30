@@ -4,12 +4,15 @@ export default function VideoBackground() {
             <video
                 className="h-full w-full absolute object-cover"
                 autoPlay
-                loop
                 muted
+                loop
+                controls={false}
                 playsInline
                 preload="auto"
+                webkit-playsinline="true"
+                x5-playsinline="true"
             >
-                <source src="https://yqkgexyzwrseoftvxpko.supabase.co/storage/v1/object/public/sorso-prenotazioni/video-bg.mp4" type="video/mp4" />
+                <source src="https://yqkgexyzwrseoftvxpko.supabase.co/storage/v1/object/public/sorso-prenotazioni/output-mobile.mp4" type="video/mp4" />
             </video>
 
             {/* Overlay scuro */}
